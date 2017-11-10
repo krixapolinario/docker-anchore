@@ -1,0 +1,63 @@
+version: '2'
+services:
+  anchore-engine:
+    image: docker.io/anchore/anchore-engine:latest
+    privileged: true
+    depends_on:
+     - anchore-db
+    ports:
+     - "8228:8228"
+     - "8338:8338"
+    networks:
+      - anchore
+    volumes:
+      - /root/aevolume/config:/config/:Z
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://graylog:12201"
+  anchore-db:
+    image: postgres:9
+    networks:
+      - anchore
+    volumes:
+      - /root/aevolume/db/:/var/lib/postgresql/data/pgdata/:Z
+    environment:
+      - POSTGRES_PASSWORD=mypassword
+      - PGDATA=/var/lib/postgresql/data/pgdata/
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://graylog:12201"
+  anchore-cli:
+    image: docker.io/anchore/cli:latest
+    networks:
+      - anchore
+#    environment:
+#      - ANCHORE_CLI_URL=http://anchore-engine:8228/v1
+#      - ANCHORE_CLI_USER=admin
+#      - ANCHORE_CLI_PASS=mypassword
+#      - ANCHORE_CLI_SSL_VERIFY=n
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://graylog:12201"
+  anchore-jenkins:
+    image: jenkins/jenkins:latest
+    privileged: true
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    networks:
+      - anchore
+    volumes:
+      - /root/aevolume/jenkins:/var/jenkins_home
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://graylog:12201"
+networks:
+  anchore:
